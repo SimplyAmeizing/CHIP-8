@@ -1,5 +1,5 @@
 #include <iostream>
-#include <cstream>
+#include <cstring>
 #include <fstream>
 #include <random>
 #include <stdio.h>
@@ -7,7 +7,7 @@
 #include "time.h"
 
 #include "chip8.h"
-
+using namespace std;
 
 unsigned char chip8_fontset[80] =
 {
@@ -38,7 +38,7 @@ void Chip8::initialize(){
     sptr = 0;
 
     for(int i=0; i<2048; i++){
-        gfx[i] = 0 //clear display
+        gfx[i] = 0; //clear display
     }
 
     for(int j=0; j<16; j++){
@@ -59,7 +59,7 @@ void Chip8::initialize(){
     sound_timer = 0;
 }
 
-bool Chip8::load(char const* rpath){
+bool Chip8::load(const char* rpath){
     initialize();
 
     std::ifstream file(rpath, std::ios::binary | std::ios::ate);
@@ -89,6 +89,7 @@ bool Chip8::load(char const* rpath){
     return true;
 }
 
+
 void Chip8::emulateCycle(){
     opcode = memory[pc] << 8 | memory[pc+1]; //two byte opcode
 
@@ -101,7 +102,7 @@ void Chip8::emulateCycle(){
                 case 0x0000: //00E0 clears screen
                     for(int i=0; i<2048; i++)
                         gfx[i] = 0;
-                    drawFlag=true;
+                    drawFlag = true;
                     pc+=2;
                     break;
                 
@@ -110,9 +111,11 @@ void Chip8::emulateCycle(){
                     --sptr;
                     pc = stack[sptr];
                     pc += 2;
-                
+                	break;
+
                 default:
                     cout << "unknown opcode\n";
+                    exit(1);
             }
             break;
         
@@ -220,6 +223,7 @@ void Chip8::emulateCycle(){
 
                 default:
 					cout << "unknown opcode\n";
+					exit(1);
             }
             break;
         
@@ -244,7 +248,7 @@ void Chip8::emulateCycle(){
             pc += 2;
             break;
 
-        case 0xD000: //DXYN draws a sprite at specific location
+        case 0xD000:{ //DXYN draws a sprite at specific location
             unsigned short x = V[(opcode & 0x0F00) >> 8];
             unsigned short y = V[(opcode & 0x00F0) >> 4];
             unsigned short h = opcode & 0x000F; //height of N
@@ -256,15 +260,16 @@ void Chip8::emulateCycle(){
 
                 for(int j=0; j<8; j++){
                     if((pix & (0x80 >> j)) != 0){//means that bit is on that specific pixel
-                        if(gfx[(x + i + ((y + j) * 64))] == 1)
+                        if(gfx[(x + j + ((y + i) * 64))] == 1)
                             V[0xF] = 1;
-                        gfx[(x + i + ((y + j) * 64))] ^= 1;//xor for drawing sprite
+                        gfx[(x + j + ((y + i) * 64))] ^= 1;//xor for drawing sprite
                     }
                 }
             }
             drawFlag = true;
             pc += 2;
             break;
+        }
 
         case 0xE000:
             switch(opcode & 0x00FF){
@@ -284,10 +289,11 @@ void Chip8::emulateCycle(){
                     
                 default:
 					cout << "unknown opcode\n";
+					exit(1);
             }
             break;
 
-        case 0xF000:
+        case 0xF000:{
             switch(opcode & 0x00FF){ 
                 case 0x0007://FX07 set VX to value of delay timer
                     V[(opcode & 0x0F00)] = delay_timer;
@@ -295,7 +301,7 @@ void Chip8::emulateCycle(){
                     break;
                 
                 case 0x000A://FX0A makes sure a key press is awaited, then stored in VX
-                    bool press = false;
+                {    bool press = false;
                     for(int i=0; i<16; i++){
                         if(kypd[i] != 0){
                             V[(opcode & 0x0F00) >> 8] = i;
@@ -303,11 +309,11 @@ void Chip8::emulateCycle(){
                         }
                     }
                     if (press == false)
-                        pc -= 0;
-                    else
-                        pc += 2;
+                        return;
+                    pc += 2;
                     break;
-                
+                }
+
                 case 0x0015: //FX15 sets delay timer to VX
                     delay_timer = V[(opcode & 0x0F00) >> 8];
                     pc += 2;
@@ -329,7 +335,7 @@ void Chip8::emulateCycle(){
                     break;
                 
                 case 0x0033: //FX33 stores the binary coded decimal representation of VX
-                    unsigned char val = V[(opcode & 0x0F00) >> 8];
+                {    unsigned char val = V[(opcode & 0x0F00) >> 8];
                     memory[I + 2] = val % 10; //incase we have two digit number
                     val /= 10;
 
@@ -339,6 +345,7 @@ void Chip8::emulateCycle(){
                     memory[I] = val % 10;
                     pc += 2;
                     break;
+                }
 
                 case 0x0055: //FX55 stores V0 to VX in memory address starting at I with offset from I increased
                     for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i)
@@ -347,7 +354,7 @@ void Chip8::emulateCycle(){
                     pc += 2;
                     break;
                 
-                case 0x0066: //FX55 fills V0 to VX in memory address starting at I with offset from I increased
+                case 0x0065: //FX55 fills V0 to VX in memory address starting at I with offset from I increased
                     for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i)
                         V[i] = memory[I + i];
                     
@@ -356,11 +363,14 @@ void Chip8::emulateCycle(){
 
                 default:
 					cout << "unknown opcode\n";
+					exit(1);
             }
             break;
+        }
         
         default:
 		    cout << "unknown opcode\n";
+		    exit(1);
     }
 
     if (delay_timer > 0)
@@ -373,4 +383,6 @@ void Chip8::emulateCycle(){
     }
 }
 
-chip8::~chip8() {}
+
+
+Chip8::~Chip8() {}

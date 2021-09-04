@@ -25,17 +25,10 @@ public:
 
     bool drawFlag;
     void initialize();
-    bool load();
+    bool load(const char* path);
     void emulateCycle();
     
-}
-
-
-
-
-
-
-
+};
 
 
 
