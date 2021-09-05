@@ -1,4 +1,4 @@
-CHIP-8 Emulator
+<b>CHIP-8 Emulator Instructions</b>
 
 In order to get this CHIP-8 Emulator up and running, first you have to be on a Windows or Linux OS.
 
